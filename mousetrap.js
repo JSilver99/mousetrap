@@ -151,6 +151,13 @@ window.Mousetrap = (function() {
          * @type {boolean|string}
          */
         that._inside_sequence = false;
+        
+        /**
+         * keep track of the currently pressed keys for keypress.
+         *
+         * @type {Object}
+         */
+        that._keys_pressed = {};
 
         /**
          * A list of DOM elements associated with this scope.
@@ -193,10 +200,16 @@ window.Mousetrap = (function() {
          * @returns void
          */
         function _fireCallback(code, action, e) {
-
             // if this event should not happen stop here
             if (_stop(e)) {
                 return;
+            }
+            
+            // remember which keys were pressed, so they don't repeat.
+            if (action !== 'keyup') {
+                that._keys_pressed[code] = true;
+            } else {
+                delete that._keys_pressed[code];
             }
 
             var callbacks = _getMatches(that, code, _eventModifiers(e), action),
@@ -206,7 +219,6 @@ window.Mousetrap = (function() {
 
             // loop through matching callbacks for this key event
             for (i = 0; i < callbacks.length; ++i) {
-
                 // fire for all sequence callbacks
                 // this is because if for example you have multiple sequences
                 // bound such as "g i" and "g t" they both need to fire the
@@ -245,7 +257,11 @@ window.Mousetrap = (function() {
          * @returns void
          */
         function _handleKeyDown(e) {
-            _fireCallback(_keyCodeFromEvent(e), 'keydown', e);
+            var keyCode = _keyCodeFromEvent(e);
+            if (!that._keys_pressed[keyCode]) {
+                _fireCallback(keyCode, 'keypress', e);
+            }
+            _fireCallback(keyCode, 'keydown', e);
         }
 
         /**
@@ -255,11 +271,12 @@ window.Mousetrap = (function() {
          * @returns void
          */
         function _handleKeyUp(e) {
+            var keyCode = _keyCodeFromEvent(e);
             if (that._ignore_next_keyup === e.keyCode) {
                 that._ignore_next_keyup = false;
                 return;
             }
-            _fireCallback(_keyCodeFromEvent(e), 'keyup', e);
+            _fireCallback(keyCode, 'keyup', e);
         }
 
         // start!
